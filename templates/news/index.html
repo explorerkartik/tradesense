@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}AI News Analyzer{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:28px;">
+    <h1 style="font-size:22px; font-weight:700;">🤖 AI News Analyzer</h1>
+    <p style="color:var(--muted); font-size:13px; margin-top:4px;">Groq AI se trading news analyze karo — Real/Fake/Manipulated detect karo</p>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+    <!-- Input Section -->
+    <div class="card">
+        <div style="font-size:15px; font-weight:600; margin-bottom:16px;">📰 News Input</div>
+        
+        <div class="form-group">
+            <label class="form-label">News Text Paste karo</label>
+            <textarea id="news-text" class="form-control" rows="8" placeholder="Yahan trading news paste karo... e.g. 'RBI ne interest rates 0.5% badhaye, market mein panic sell-off expected...'" style="resize:vertical;"></textarea>
+        </div>
+
+        <div style="margin-bottom:16px;">
+            <label class="form-label">Ya sample news try karo:</label>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                <button onclick="setSample(1)" style="background:rgba(0,200,100,0.1); border:1px solid rgba(0,200,100,0.3); color:#00c864; padding:6px 12px; border-radius:6px; font-size:12px; cursor:pointer;">📈 Bullish Sample</button>
+                <button onclick="setSample(2)" style="background:rgba(255,68,68,0.1); border:1px solid rgba(255,68,68,0.3); color:#ff4444; padding:6px 12px; border-radius:6px; font-size:12px; cursor:pointer;">📉 Bearish Sample</button>
+                <button onclick="setSample(3)" style="background:rgba(240,165,0,0.1); border:1px solid rgba(240,165,0,0.3); color:#f0a500; padding:6px 12px; border-radius:6px; font-size:12px; cursor:pointer;">⚠️ Fake News Sample</button>
+            </div>
+        </div>
+
+        <button onclick="analyzeNews()" id="analyze-btn" class="btn-primary btn-full">
+            🔍 Analyze with Groq AI
+        </button>
+    </div>
+
+    <!-- Result Section -->
+    <div class="card" id="result-card">
+        <div style="font-size:15px; font-weight:600; margin-bottom:16px;">📊 Analysis Result</div>
+        
+        <div id="result-placeholder" style="text-align:center; padding:40px 20px;">
+            <div style="font-size:48px; margin-bottom:16px;">🤖</div>
+            <div style="color:var(--muted); font-size:14px;">News paste karo aur Analyze button dabao</div>
+        </div>
+
+        <div id="result-content" style="display:none;">
+            <!-- Verdict -->
+            <div style="text-align:center; margin-bottom:20px;">
+                <div id="verdict-badge" style="display:inline-block; padding:8px 24px; border-radius:20px; font-size:18px; font-weight:700; margin-bottom:8px;"></div>
+                <div id="sentiment-badge" style="display:inline-block; padding:4px 16px; border-radius:12px; font-size:13px; font-weight:600; margin-left:8px;"></div>
+            </div>
+
+            <!-- Credibility Bar -->
+            <div style="margin-bottom:20px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                    <span style="font-size:13px; color:var(--muted);">Credibility Score</span>
+                    <span style="font-size:13px; font-weight:700;" id="credibility-score">--</span>
+                </div>
+                <div style="background:var(--border); border-radius:4px; height:8px;">
+                    <div id="credibility-bar" style="height:8px; border-radius:4px; transition:width 1s ease; background:var(--green); width:0%;"></div>
+                </div>
+            </div>
+
+            <!-- Impact -->
+            <div style="margin-bottom:16px; padding:12px; background:rgba(255,255,255,0.03); border-radius:8px;">
+                <div style="font-size:12px; color:var(--muted); margin-bottom:4px;">Market Impact</div>
+                <div style="font-size:14px; font-weight:600;" id="impact-text">--</div>
+            </div>
+
+            <!-- Explanation -->
+            <div style="margin-bottom:16px; padding:12px; background:rgba(255,255,255,0.03); border-radius:8px;">
+                <div style="font-size:12px; color:var(--muted); margin-bottom:6px;">AI Explanation</div>
+                <div style="font-size:13px; line-height:1.6;" id="explanation-text">--</div>
+            </div>
+
+            <!-- Key Points -->
+            <div style="padding:12px; background:rgba(255,255,255,0.03); border-radius:8px;">
+                <div style="font-size:12px; color:var(--muted); margin-bottom:8px;">Key Points</div>
+                <div id="key-points"></div>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="result-loading" style="display:none; text-align:center; padding:40px;">
+            <div style="width:40px; height:40px; border:3px solid var(--border); border-top-color:var(--green); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 16px;"></div>
+            <div style="color:var(--muted); font-size:13px;">Groq AI analyze kar raha hai...</div>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<script>
+const samples = {
+    1: "Reliance Industries reports record quarterly profit of Rs 19,878 crore, up 18% year-over-year. The company's retail and digital services segments showed strong growth. Analysts expect the stock to reach Rs 3,200 in the next quarter.",
+    2: "RBI unexpectedly raises repo rate by 75 basis points to combat inflation surging to 8.5%. This aggressive move signals deep concern about economic stability. Banking stocks expected to face severe pressure as borrowing costs spike.",
+    3: "BREAKING: Elon Musk secretly buys 40% stake in TCS for $50 billion! Insiders confirm the deal will be announced tomorrow. TCS share price expected to double overnight. Buy now before the official announcement!"
+};
+
+function setSample(n) {
+    document.getElementById('news-text').value = samples[n];
+}
+
+async function analyzeNews() {
+    const text = document.getElementById('news-text').value.trim();
+    if(!text) { alert('News text likho pehle!'); return; }
+    if(text.length < 20) { alert('Thoda aur likho — kam se kam 20 characters!'); return; }
+
+    document.getElementById('result-placeholder').style.display = 'none';
+    document.getElementById('result-content').style.display = 'none';
+    document.getElementById('result-loading').style.display = 'block';
+    document.getElementById('analyze-btn').disabled = true;
+    document.getElementById('analyze-btn').textContent = 'Analyzing...';
+
+    try {
+        const res = await fetch('/api/analyze-news', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text})
+        });
+        const data = await res.json();
+
+        if(data.success) {
+            showResult(data.result);
+        } else {
+            alert('Error: ' + data.error);
+            document.getElementById('result-placeholder').style.display = 'block';
+        }
+    } catch(e) {
+        alert('Server error! CMD mein dekho.');
+        document.getElementById('result-placeholder').style.display = 'block';
+    }
+
+    document.getElementById('result-loading').style.display = 'none';
+    document.getElementById('analyze-btn').disabled = false;
+    document.getElementById('analyze-btn').textContent = '🔍 Analyze with Groq AI';
+}
+
+function showResult(r) {
+    // Verdict badge
+    const vColors = {
+        'REAL': {bg:'rgba(0,200,100,0.15)', color:'#00c864', text:'✅ REAL NEWS'},
+        'FAKE': {bg:'rgba(255,68,68,0.15)', color:'#ff4444', text:'❌ FAKE NEWS'},
+        'MANIPULATED': {bg:'rgba(240,165,0,0.15)', color:'#f0a500', text:'⚠️ MANIPULATED'}
+    };
+    const v = vColors[r.verdict] || vColors['REAL'];
+    const vBadge = document.getElementById('verdict-badge');
+    vBadge.style.background = v.bg;
+    vBadge.style.color = v.color;
+    vBadge.textContent = v.text;
+
+    // Sentiment badge
+    const sColors = {'BULLISH':'#00c864','BEARISH':'#ff4444','NEUTRAL':'#8b949e'};
+    const sBadge = document.getElementById('sentiment-badge');
+    sBadge.style.background = 'rgba(255,255,255,0.05)';
+    sBadge.style.color = sColors[r.sentiment] || '#8b949e';
+    sBadge.textContent = r.sentiment + ' 📊';
+
+    // Credibility
+    const score = r.credibility || 0;
+    document.getElementById('credibility-score').textContent = score + '/100';
+    const barColor = score >= 70 ? '#00c864' : score >= 40 ? '#f0a500' : '#ff4444';
+    document.getElementById('credibility-bar').style.background = barColor;
+    setTimeout(() => {
+        document.getElementById('credibility-bar').style.width = score + '%';
+    }, 100);
+
+    // Impact
+    const iColors = {'HIGH':'#ff4444','MEDIUM':'#f0a500','LOW':'#00c864'};
+    document.getElementById('impact-text').style.color = iColors[r.impact] || '#8b949e';
+    document.getElementById('impact-text').textContent = r.impact + ' Impact';
+
+    // Explanation
+    document.getElementById('explanation-text').textContent = r.explanation || '--';
+
+    // Key points
+    const points = r.key_points || [];
+    document.getElementById('key-points').innerHTML = points.map(p =>
+        `<div style="display:flex; align-items:start; gap:8px; margin-bottom:6px; font-size:13px;">
+            <span style="color:var(--green); margin-top:2px;">•</span>
+            <span>${p}</span>
+        </div>`
+    ).join('');
+
+    document.getElementById('result-content').style.display = 'block';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}AI Trading Signals{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:28px;">
+    <h1 style="font-size:22px; font-weight:700;">🤖 AI Trading Signals</h1>
+    <p style="color:var(--muted); font-size:13px; margin-top:4px;">Groq AI se BUY/SELL/HOLD signals pao — Crypto, Stocks & Forex</p>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+    <!-- Input -->
+    <div class="card">
+        <div style="font-size:15px; font-weight:600; margin-bottom:16px;">📊 Signal Generator</div>
+
+        <div class="form-group">
+            <label class="form-label">Asset Type</label>
+            <select id="asset-type" class="form-control">
+                <option value="crypto">🪙 Cryptocurrency</option>
+                <option value="stock">📈 Indian Stock</option>
+                <option value="forex">💱 Forex</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Symbol</label>
+            <input type="text" id="symbol-input" class="form-control" placeholder="e.g. BTC, ETH, RELIANCE, TCS">
+        </div>
+
+        <div style="margin-bottom:16px;">
+            <label class="form-label">Quick Select:</label>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                <button onclick="setSymbol('BTC','crypto')" class="quick-btn">BTC</button>
+                <button onclick="setSymbol('ETH','crypto')" class="quick-btn">ETH</button>
+                <button onclick="setSymbol('SOL','crypto')" class="quick-btn">SOL</button>
+                <button onclick="setSymbol('RELIANCE','stock')" class="quick-btn">RELIANCE</button>
+                <button onclick="setSymbol('TCS','stock')" class="quick-btn">TCS</button>
+                <button onclick="setSymbol('INFY','stock')" class="quick-btn">INFY</button>
+                <button onclick="setSymbol('USD/INR','forex')" class="quick-btn">USD/INR</button>
+            </div>
+        </div>
+
+        <button onclick="getSignal()" id="signal-btn" class="btn-primary btn-full">
+            ⚡ Get AI Signal
+        </button>
+    </div>
+
+    <!-- Result -->
+    <div class="card">
+        <div style="font-size:15px; font-weight:600; margin-bottom:16px;">📈 Signal Result</div>
+
+        <div id="signal-placeholder" style="text-align:center; padding:40px 20px;">
+            <div style="font-size:48px; margin-bottom:16px;">⚡</div>
+            <div style="color:var(--muted); font-size:14px;">Symbol select karo aur signal lo</div>
+        </div>
+
+        <div id="signal-loading" style="display:none; text-align:center; padding:40px;">
+            <div style="width:40px; height:40px; border:3px solid var(--border); border-top-color:var(--green); border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 16px;"></div>
+            <div style="color:var(--muted); font-size:13px;">Groq AI signal generate kar raha hai...</div>
+        </div>
+
+        <div id="signal-content" style="display:none;">
+            <div style="text-align:center; margin-bottom:24px;">
+                <div style="font-size:14px; color:var(--muted); margin-bottom:8px;" id="signal-symbol">--</div>
+                <div id="signal-badge" style="display:inline-block; padding:12px 32px; border-radius:12px; font-size:24px; font-weight:700; margin-bottom:12px;"></div>
+                <div style="display:flex; justify-content:center; gap:16px;">
+                    <div style="text-align:center;">
+                        <div style="font-size:11px; color:var(--muted);">Confidence</div>
+                        <div style="font-size:18px; font-weight:700;" id="confidence-val">--</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:11px; color:var(--muted);">Risk</div>
+                        <div style="font-size:18px; font-weight:700;" id="risk-val">--</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:11px; color:var(--muted);">Target</div>
+                        <div style="font-size:18px; font-weight:700;" id="target-val">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="padding:12px; background:rgba(255,255,255,0.03); border-radius:8px; margin-bottom:12px;">
+                <div style="font-size:12px; color:var(--muted); margin-bottom:4px;">Timeframe</div>
+                <div style="font-size:14px; font-weight:600;" id="timeframe-val">--</div>
+            </div>
+
+            <div style="padding:12px; background:rgba(255,255,255,0.03); border-radius:8px;">
+                <div style="font-size:12px; color:var(--muted); margin-bottom:6px;">AI Reasoning</div>
+                <div style="font-size:13px; line-height:1.6;" id="reason-val">--</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+.quick-btn {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.quick-btn:hover { background: rgba(0,200,100,0.1); border-color: var(--green); color: var(--green); }
+</style>
+
+<script>
+function setSymbol(symbol, type) {
+    document.getElementById('symbol-input').value = symbol;
+    document.getElementById('asset-type').value = type;
+}
+
+async function getSignal() {
+    const symbol = document.getElementById('symbol-input').value.trim().toUpperCase();
+    const assetType = document.getElementById('asset-type').value;
+
+    if(!symbol) { alert('Symbol likho pehle!'); return; }
+
+    document.getElementById('signal-placeholder').style.display = 'none';
+    document.getElementById('signal-content').style.display = 'none';
+    document.getElementById('signal-loading').style.display = 'block';
+    document.getElementById('signal-btn').disabled = true;
+    document.getElementById('signal-btn').textContent = 'Generating...';
+
+    try {
+        const res = await fetch('/api/signal', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({symbol, asset_type: assetType})
+        });
+        const data = await res.json();
+
+        if(data.success) {
+            showSignal(data.result, data.symbol);
+        } else {
+            alert('Error: ' + data.error);
+            document.getElementById('signal-placeholder').style.display = 'block';
+        }
+    } catch(e) {
+        alert('Server error!');
+        document.getElementById('signal-placeholder').style.display = 'block';
+    }
+
+    document.getElementById('signal-loading').style.display = 'none';
+    document.getElementById('signal-btn').disabled = false;
+    document.getElementById('signal-btn').textContent = '⚡ Get AI Signal';
+}
+
+function showSignal(r, symbol) {
+    document.getElementById('signal-symbol').textContent = symbol;
+
+    const sColors = {
+        'BUY':  {bg:'rgba(0,200,100,0.15)', color:'#00c864', text:'🟢 BUY'},
+        'SELL': {bg:'rgba(255,68,68,0.15)',  color:'#ff4444', text:'🔴 SELL'},
+        'HOLD': {bg:'rgba(240,165,0,0.15)',  color:'#f0a500', text:'🟡 HOLD'}
+    };
+    const s = sColors[r.signal] || sColors['HOLD'];
+    const badge = document.getElementById('signal-badge');
+    badge.style.background = s.bg;
+    badge.style.color = s.color;
+    badge.textContent = s.text;
+
+    const rColors = {'LOW':'#00c864','MEDIUM':'#f0a500','HIGH':'#ff4444'};
+    document.getElementById('confidence-val').textContent = (r.confidence || 0) + '%';
+    document.getElementById('risk-val').style.color = rColors[r.risk_level] || '#8b949e';
+    document.getElementById('risk-val').textContent = r.risk_level || '--';
+    document.getElementById('target-val').textContent = r.target_price_change || '--';
+    document.getElementById('timeframe-val').textContent = r.timeframe || '--';
+    document.getElementById('reason-val').textContent = r.reason || '--';
+
+    document.getElementById('signal-content').style.display = 'block';
+}
+</script>
+{% endblock %}

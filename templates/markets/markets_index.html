@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}Live Markets{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:28px; display:flex; align-items:center; justify-content:space-between;">
+    <div>
+        <h1 style="font-size:22px; font-weight:700;">📈 Live Markets</h1>
+        <p style="color:var(--muted); font-size:13px; margin-top:4px;">Real-time prices — Crypto, Stocks & Forex</p>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px;">
+        <div id="live-dot" style="width:8px; height:8px; background:var(--green); border-radius:50%; animation:pulse 2s infinite;"></div>
+        <span style="font-size:12px; color:var(--muted);" id="last-updated">Updating...</span>
+    </div>
+</div>
+
+<!-- Tab Buttons -->
+<div style="display:flex; gap:8px; margin-bottom:24px; border-bottom:1px solid var(--border); padding-bottom:0;">
+    <button class="tab-btn active" onclick="switchTab('crypto')" id="tab-crypto">🪙 Crypto</button>
+    <button class="tab-btn" onclick="switchTab('stocks')" id="tab-stocks">📊 Indian Stocks</button>
+    <button class="tab-btn" onclick="switchTab('forex')" id="tab-forex">💱 Forex</button>
+</div>
+
+<!-- Crypto Tab -->
+<div id="panel-crypto">
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:16px;" id="crypto-grid">
+        <div class="card" style="text-align:center; padding:32px;">
+            <div style="color:var(--muted); font-size:13px;">Loading prices...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Stocks Tab -->
+<div id="panel-stocks" style="display:none;">
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden;">
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <th style="padding:14px 20px; text-align:left; font-size:12px; color:var(--muted); font-weight:500;">SYMBOL</th>
+                    <th style="padding:14px 20px; text-align:left; font-size:12px; color:var(--muted); font-weight:500;">COMPANY</th>
+                    <th style="padding:14px 20px; text-align:right; font-size:12px; color:var(--muted); font-weight:500;">PRICE (₹)</th>
+                    <th style="padding:14px 20px; text-align:right; font-size:12px; color:var(--muted); font-weight:500;">24H CHANGE</th>
+                </tr>
+            </thead>
+            <tbody id="stocks-table">
+                <tr><td colspan="4" style="padding:32px; text-align:center; color:var(--muted); font-size:13px;">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Forex Tab -->
+<div id="panel-forex" style="display:none;">
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:16px;" id="forex-grid">
+        <div class="card" style="text-align:center; padding:32px;">
+            <div style="color:var(--muted); font-size:13px;">Loading rates...</div>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+.tab-btn {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: -1px;
+}
+.tab-btn.active { color: var(--green); border-bottom-color: var(--green); }
+.tab-btn:hover { color: var(--text); }
+.price-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    transition: border-color 0.2s, transform 0.2s;
+}
+.price-card:hover { border-color: var(--green); transform: translateY(-2px); }
+.change-up { color: var(--green); }
+.change-down { color: var(--red); }
+</style>
+
+<script>
+function switchTab(tab) {
+    ['crypto','stocks','forex'].forEach(t => {
+        document.getElementById('panel-'+t).style.display = t===tab ? 'block' : 'none';
+        document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+    });
+}
+
+function formatNum(n) {
+    if(n >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
+    if(n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+    return '$' + n.toLocaleString();
+}
+
+function changeHtml(val) {
+    const cls = val >= 0 ? 'change-up' : 'change-down';
+    const arrow = val >= 0 ? '▲' : '▼';
+    return `<span class="${cls}">${arrow} ${Math.abs(val).toFixed(2)}%</span>`;
+}
+
+async function loadCrypto() {
+    try {
+        const res = await fetch('/api/prices/crypto');
+        const data = await res.json();
+        if(data.success) {
+            const grid = document.getElementById('crypto-grid');
+            grid.innerHTML = data.data.map(c => `
+                <div class="price-card">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+                        ${c.image ? `<img src="${c.image}" style="width:32px; height:32px; border-radius:50%;">` : `<div style="width:32px; height:32px; border-radius:50%; background:var(--border); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700;">${c.symbol[0]}</div>`}
+                        <div>
+                            <div style="font-weight:700; font-size:15px;">${c.symbol}</div>
+                            <div style="font-size:11px; color:var(--muted);">${c.name}</div>
+                        </div>
+                    </div>
+                    <div style="font-size:22px; font-weight:700; margin-bottom:6px;">$${c.price.toLocaleString()}</div>
+                    <div style="font-size:13px; margin-bottom:10px;">${changeHtml(c.change_24h)}</div>
+                    <div style="font-size:11px; color:var(--muted);">Vol: ${formatNum(c.volume)}</div>
+                </div>
+            `).join('');
+        }
+    } catch(e) { console.error(e); }
+}
+
+async function loadStocks() {
+    try {
+        const res = await fetch('/api/prices/stocks');
+        const data = await res.json();
+        if(data.success) {
+            const tbody = document.getElementById('stocks-table');
+            tbody.innerHTML = data.data.map(s => `
+                <tr style="border-bottom:1px solid var(--border); transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background=''">
+                    <td style="padding:14px 20px; font-weight:700; font-size:13px; color:var(--blue);">${s.symbol}</td>
+                    <td style="padding:14px 20px; font-size:13px; color:var(--muted);">${s.name}</td>
+                    <td style="padding:14px 20px; text-align:right; font-weight:600; font-size:14px;">₹${s.price.toLocaleString()}</td>
+                    <td style="padding:14px 20px; text-align:right;">${changeHtml(s.change_24h)}</td>
+                </tr>
+            `).join('');
+        }
+    } catch(e) { console.error(e); }
+}
+
+async function loadForex() {
+    try {
+        const res = await fetch('/api/prices/forex');
+        const data = await res.json();
+        if(data.success) {
+            const grid = document.getElementById('forex-grid');
+            grid.innerHTML = data.data.map(f => `
+                <div class="price-card">
+                    <div style="font-size:12px; color:var(--muted); margin-bottom:6px;">${f.name}</div>
+                    <div style="font-size:20px; font-weight:700; margin-bottom:6px;">${f.symbol}</div>
+                    <div style="font-size:22px; font-weight:700; margin-bottom:8px;">₹${f.price}</div>
+                    <div>${changeHtml(f.change_24h)}</div>
+                </div>
+            `).join('');
+        }
+    } catch(e) { console.error(e); }
+}
+
+function updateTime() {
+    const now = new Date();
+    document.getElementById('last-updated').textContent = 'Updated: ' + now.toLocaleTimeString();
+}
+
+async function loadAll() {
+    await Promise.all([loadCrypto(), loadStocks(), loadForex()]);
+    updateTime();
+}
+
+loadAll();
+setInterval(loadAll, 30000); // 30 sec refresh
+</script>
+{% endblock %}

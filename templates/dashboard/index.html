@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:24px; display:flex; align-items:center; justify-content:space-between;">
+    <div>
+        <h1 style="font-size:22px; font-weight:700;">Market Overview</h1>
+        <p style="color:var(--muted); font-size:13px; margin-top:4px;">Welcome back, <strong style="color:var(--green);">{{ current_user.username }}</strong>! 👋</p>
+    </div>
+    <div style="display:flex; align-items:center; gap:6px;">
+        <div style="width:8px; height:8px; background:var(--green); border-radius:50%; animation:pulse 2s infinite;"></div>
+        <span style="font-size:12px; color:var(--muted);">Live</span>
+    </div>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px;">
+    <div class="card" style="text-align:center;">
+        <div style="font-size:12px; color:var(--muted); margin-bottom:6px;">BTC Price</div>
+        <div style="font-size:20px; font-weight:700;" id="btc-price">--</div>
+        <div style="font-size:12px; margin-top:4px;" id="btc-change">--</div>
+    </div>
+    <div class="card" style="text-align:center;">
+        <div style="font-size:12px; color:var(--muted); margin-bottom:6px;">ETH Price</div>
+        <div style="font-size:20px; font-weight:700;" id="eth-price">--</div>
+        <div style="font-size:12px; margin-top:4px;" id="eth-change">--</div>
+    </div>
+    <div class="card" style="text-align:center;">
+        <div style="font-size:12px; color:var(--muted); margin-bottom:6px;">USD/INR</div>
+        <div style="font-size:20px; font-weight:700;" id="usd-inr">--</div>
+        <div style="font-size:12px; color:var(--muted); margin-top:4px;">Forex Rate</div>
+    </div>
+    <div class="card" style="text-align:center;">
+        <div style="font-size:12px; color:var(--muted); margin-bottom:6px;">AI Signals</div>
+        <div style="font-size:20px; font-weight:700;">0</div>
+        <div style="font-size:12px; color:var(--muted); margin-top:4px;">Step 5 mein aayega</div>
+    </div>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <div style="font-size:15px; font-weight:600;">🪙 Top Crypto</div>
+            <a href="/markets" style="font-size:12px; color:var(--green); text-decoration:none;">View All →</a>
+        </div>
+        <div id="dash-crypto"><div style="color:var(--muted); font-size:13px; text-align:center; padding:20px;">Loading...</div></div>
+    </div>
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <div style="font-size:15px; font-weight:600;">📊 Indian Stocks</div>
+            <a href="/markets" style="font-size:12px; color:var(--green); text-decoration:none;">View All →</a>
+        </div>
+        <div id="dash-stocks"><div style="color:var(--muted); font-size:13px; text-align:center; padding:20px;">Loading...</div></div>
+    </div>
+</div>
+
+<style>
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+.dash-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
+.dash-row:last-child { border-bottom:none; }
+.up { color:#00c864; }
+.down { color:#ff4444; }
+</style>
+
+<script>
+async function loadDashboard() {
+    try {
+        const res = await fetch('/api/prices/all');
+        const data = await res.json();
+        if(!data.success) return;
+
+        const btc = data.crypto.find(c => c.symbol === 'BTC');
+        const eth = data.crypto.find(c => c.symbol === 'ETH');
+        const usd = data.forex.find(f => f.symbol === 'USD/INR');
+
+        if(btc) {
+            document.getElementById('btc-price').textContent = '$' + btc.price.toLocaleString();
+            const ch = btc.change_24h;
+            document.getElementById('btc-change').innerHTML = `<span class="${ch>=0?'up':'down'}">${ch>=0?'▲':'▼'} ${Math.abs(ch).toFixed(2)}%</span>`;
+        }
+        if(eth) {
+            document.getElementById('eth-price').textContent = '$' + eth.price.toLocaleString();
+            const ch = eth.change_24h;
+            document.getElementById('eth-change').innerHTML = `<span class="${ch>=0?'up':'down'}">${ch>=0?'▲':'▼'} ${Math.abs(ch).toFixed(2)}%</span>`;
+        }
+        if(usd) document.getElementById('usd-inr').textContent = '₹' + usd.price;
+
+        document.getElementById('dash-crypto').innerHTML = data.crypto.map(c => `
+            <div class="dash-row">
+                <div>
+                    <div style="font-weight:600; font-size:13px;">${c.symbol}</div>
+                    <div style="font-size:11px; color:#8b949e;">${c.name}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-weight:600; font-size:13px;">$${c.price.toLocaleString()}</div>
+                    <div style="font-size:11px;" class="${c.change_24h>=0?'up':'down'}">${c.change_24h>=0?'▲':'▼'} ${Math.abs(c.change_24h).toFixed(2)}%</div>
+                </div>
+            </div>`).join('');
+
+        document.getElementById('dash-stocks').innerHTML = data.stocks.map(s => `
+            <div class="dash-row">
+                <div>
+                    <div style="font-weight:600; font-size:13px;">${s.symbol}</div>
+                    <div style="font-size:11px; color:#8b949e;">${s.name}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-weight:600; font-size:13px;">₹${s.price.toLocaleString()}</div>
+                    <div style="font-size:11px;" class="${s.change_24h>=0?'up':'down'}">${s.change_24h>=0?'▲':'▼'} ${Math.abs(s.change_24h).toFixed(2)}%</div>
+                </div>
+            </div>`).join('');
+
+    } catch(e) { console.error(e); }
+}
+
+loadDashboard();
+setInterval(loadDashboard, 30000);
+</script>
+{% endblock %}

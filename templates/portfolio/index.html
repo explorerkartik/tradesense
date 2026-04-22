@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block title %}Portfolio{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:28px; display:flex; align-items:center; justify-content:space-between;">
+    <div>
+        <h1 style="font-size:22px; font-weight:700;">💼 My Portfolio</h1>
+        <p style="color:var(--muted); font-size:13px; margin-top:4px;">Apni holdings track karo</p>
+    </div>
+    <button onclick="showAddModal()" class="btn-primary">+ Add Trade</button>
+</div>
+
+<!-- Summary Cards -->
+<div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px;">
+    <div class="card" style="text-align:center;">
+        <div style="font-size:12px; color:var(--muted); margin-bottom:6px;">Total Invested</div>
+        <div style="font-size:20px; font-weight:700;" id="total-invested">₹0</div>
+    </div>
+    <div class="card" style="text-align:center;">
+        <div style="font-size:12px; color:var(--muted); margin-bottom:6px;">Current Value</div>
+        <div style="font-size:20px; font-weight:700;" id="total-value">₹0</div>
+    </div>
+    <div class="card" style="text-align:center;">
+        <div style="font-size:12px; color:var(--muted); margin-bottom:6px;">Total P&L</div>
+        <div style="font-size:20px; font-weight:700;" id="total-pnl">₹0</div>
+    </div>
+    <div class="card" style="text-align:center;">
+        <div style="font-size:12px; color:var(--muted); margin-bottom:6px;">Holdings</div>
+        <div style="font-size:20px; font-weight:700;" id="total-holdings">0</div>
+    </div>
+</div>
+
+<!-- Portfolio Table -->
+<div class="card" style="padding:0; overflow:hidden;">
+    <div style="padding:20px 24px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-size:15px; font-weight:600;">Holdings</div>
+    </div>
+    <div id="portfolio-empty" style="text-align:center; padding:48px; display:none;">
+        <div style="font-size:48px; margin-bottom:16px;">📭</div>
+        <div style="color:var(--muted); font-size:14px; margin-bottom:16px;">Koi holding nahi hai abhi</div>
+        <button onclick="showAddModal()" class="btn-primary">+ Pehla Trade Add karo</button>
+    </div>
+    <table style="width:100%; border-collapse:collapse;" id="portfolio-table">
+        <thead>
+            <tr style="border-bottom:1px solid var(--border);">
+                <th style="padding:14px 20px; text-align:left; font-size:12px; color:var(--muted); font-weight:500;">ASSET</th>
+                <th style="padding:14px 20px; text-align:right; font-size:12px; color:var(--muted); font-weight:500;">QTY</th>
+                <th style="padding:14px 20px; text-align:right; font-size:12px; color:var(--muted); font-weight:500;">BUY PRICE</th>
+                <th style="padding:14px 20px; text-align:right; font-size:12px; color:var(--muted); font-weight:500;">INVESTED</th>
+                <th style="padding:14px 20px; text-align:right; font-size:12px; color:var(--muted); font-weight:500;">P&L</th>
+                <th style="padding:14px 20px; text-align:right; font-size:12px; color:var(--muted); font-weight:500;">TYPE</th>
+                <th style="padding:14px 20px; text-align:center; font-size:12px; color:var(--muted); font-weight:500;">ACTION</th>
+            </tr>
+        </thead>
+        <tbody id="portfolio-body"></tbody>
+    </table>
+</div>
+
+<!-- Add Modal -->
+<div id="add-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:16px; padding:32px; width:100%; max-width:480px; margin:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+            <div style="font-size:18px; font-weight:700;">+ Add Trade</div>
+            <button onclick="hideAddModal()" style="background:none; border:none; color:var(--muted); font-size:20px; cursor:pointer;">✕</button>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Asset Type</label>
+            <select id="add-type" class="form-control">
+                <option value="crypto">🪙 Cryptocurrency</option>
+                <option value="stock">📈 Stock</option>
+                <option value="forex">💱 Forex</option>
+            </select>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+                <label class="form-label">Symbol</label>
+                <input type="text" id="add-symbol" class="form-control" placeholder="BTC, TCS...">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Name</label>
+                <input type="text" id="add-name" class="form-control" placeholder="Bitcoin...">
+            </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+                <label class="form-label">Quantity</label>
+                <input type="number" id="add-qty" class="form-control" placeholder="0.5" step="any" min="0">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Buy Price</label>
+                <input type="number" id="add-price" class="form-control" placeholder="50000" step="any" min="0">
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Currency</label>
+            <select id="add-currency" class="form-control">
+                <option value="INR">₹ INR</option>
+                <option value="USD">$ USD</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Notes (Optional)</label>
+            <input type="text" id="add-notes" class="form-control" placeholder="Long term hold...">
+        </div>
+        <button onclick="addTrade()" class="btn-primary btn-full">Add to Portfolio</button>
+    </div>
+</div>
+
+<style>
+.up { color: #00c864; }
+.down { color: #ff4444; }
+</style>
+
+<script>
+function showAddModal() {
+    document.getElementById('add-modal').style.display = 'flex';
+}
+function hideAddModal() {
+    document.getElementById('add-modal').style.display = 'none';
+}
+
+async function loadPortfolio() {
+    try {
+        const res = await fetch('/api/portfolio');
+        const data = await res.json();
+        if(!data.success) return;
+
+        const items = data.data;
+        const tbody = document.getElementById('portfolio-body');
+
+        if(items.length === 0) {
+            document.getElementById('portfolio-table').style.display = 'none';
+            document.getElementById('portfolio-empty').style.display = 'block';
+            return;
+        }
+
+        document.getElementById('portfolio-table').style.display = 'table';
+        document.getElementById('portfolio-empty').style.display = 'none';
+
+        let totalInvested = 0, totalValue = 0, totalPnl = 0;
+
+        tbody.innerHTML = items.map(item => {
+            totalInvested += item.total_invested;
+            totalValue += item.current_value;
+            totalPnl += item.profit_loss;
+
+            const pnlClass = item.profit_loss >= 0 ? 'up' : 'down';
+            const pnlSign = item.profit_loss >= 0 ? '+' : '';
+            const typeColors = {'crypto':'#f0a500','stock':'#58a6ff','forex':'#00c864'};
+
+            return `<tr style="border-bottom:1px solid var(--border);" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background=''">
+                <td style="padding:14px 20px;">
+                    <div style="font-weight:700; font-size:13px;">${item.symbol}</div>
+                    <div style="font-size:11px; color:var(--muted);">${item.name}</div>
+                </td>
+                <td style="padding:14px 20px; text-align:right; font-size:13px;">${item.quantity}</td>
+                <td style="padding:14px 20px; text-align:right; font-size:13px;">${item.currency === 'USD' ? '$' : '₹'}${item.buy_price.toLocaleString()}</td>
+                <td style="padding:14px 20px; text-align:right; font-size:13px;">${item.currency === 'USD' ? '$' : '₹'}${item.total_invested.toLocaleString()}</td>
+                <td style="padding:14px 20px; text-align:right; font-size:13px;" class="${pnlClass}">${pnlSign}${item.profit_loss.toFixed(2)}</td>
+                <td style="padding:14px 20px; text-align:right;">
+                    <span style="background:rgba(255,255,255,0.05); color:${typeColors[item.asset_type]||'#8b949e'}; padding:3px 10px; border-radius:10px; font-size:11px; font-weight:600;">${item.asset_type.toUpperCase()}</span>
+                </td>
+                <td style="padding:14px 20px; text-align:center;">
+                    <button onclick="deleteTrade(${item.id})" style="background:rgba(255,68,68,0.1); border:1px solid rgba(255,68,68,0.3); color:#ff4444; padding:4px 12px; border-radius:6px; font-size:12px; cursor:pointer;">Delete</button>
+                </td>
+            </tr>`;
+        }).join('');
+
+        document.getElementById('total-invested').textContent = '₹' + totalInvested.toLocaleString();
+        document.getElementById('total-value').textContent = '₹' + totalValue.toLocaleString();
+        const pnlEl = document.getElementById('total-pnl');
+        pnlEl.textContent = (totalPnl >= 0 ? '+' : '') + '₹' + totalPnl.toFixed(2);
+        pnlEl.className = totalPnl >= 0 ? 'up' : 'down';
+        pnlEl.style.fontSize = '20px';
+        pnlEl.style.fontWeight = '700';
+        document.getElementById('total-holdings').textContent = items.length;
+
+    } catch(e) { console.error(e); }
+}
+
+async function addTrade() {
+    const symbol = document.getElementById('add-symbol').value.trim();
+    const name = document.getElementById('add-name').value.trim();
+    const asset_type = document.getElementById('add-type').value;
+    const quantity = parseFloat(document.getElementById('add-qty').value);
+    const buy_price = parseFloat(document.getElementById('add-price').value);
+    const currency = document.getElementById('add-currency').value;
+    const notes = document.getElementById('add-notes').value;
+
+    if(!symbol || !name || !quantity || !buy_price) {
+        alert('Sab required fields bharo!');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/portfolio', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({symbol, name, asset_type, quantity, buy_price, currency, notes})
+        });
+        const data = await res.json();
+        if(data.success) {
+            hideAddModal();
+            loadPortfolio();
+            document.getElementById('add-symbol').value = '';
+            document.getElementById('add-name').value = '';
+            document.getElementById('add-qty').value = '';
+            document.getElementById('add-price').value = '';
+            document.getElementById('add-notes').value = '';
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch(e) { alert('Server error!'); }
+}
+
+async function deleteTrade(id) {
+    if(!confirm('Delete karo yeh trade?')) return;
+    try {
+        const res = await fetch('/api/portfolio/' + id, {method: 'DELETE'});
+        const data = await res.json();
+        if(data.success) loadPortfolio();
+    } catch(e) { alert('Error!'); }
+}
+
+loadPortfolio();
+</script>
+{% endblock %}
